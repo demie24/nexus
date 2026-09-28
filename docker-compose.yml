@@ -1,0 +1,47 @@
+services:
+  nexus_postgres:
+    image: postgres:16-alpine
+    container_name: nexus_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nexus_user
+      POSTGRES_PASSWORD: nexus_secure_password
+      POSTGRES_DB: nexus_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - nexus_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus_user -d nexus_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nexus_redis:
+    image: redis:7-alpine
+    container_name: nexus_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - nexus_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  nexus_mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: nexus_mqtt
+    restart: unless-stopped
+    ports:
+      - "1884:1883"
+    volumes:
+      - ./infrastructure/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - nexus_mqtt_data:/mosquitto/data
+
+volumes:
+  nexus_postgres_data:
+  nexus_redis_data:
+  nexus_mqtt_data:

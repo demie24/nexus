@@ -191,7 +191,7 @@ Bagi mengelakkan sebarang konflik dengan perkhidmatan lain yang sedang aktif pad
 ## 7. Fasa Pembangunan (Roadmap)
 
 - [x] **Discovery & GitHub Setup**: Pemeriksaan persekitaran, seni bina, dan inisialisasi git repository.
-- [ ] **Fasa 1: Foundation**: Pydantic schemas, database models, session management, dan baseline configuration.
+- [x] **Fasa 1: Foundation & Core Infrastructure**: Pydantic schemas, SQLAlchemy models, Alembic migrations, security foundation, FastAPI gateway, dan pytest test suites (30 tests, 97% coverage).
 - [ ] **Fasa 2: Virtual Factory Simulator**: Penjana telemetri sintetik realistik untuk mesin M01-M06 dengan suntikan kecacatan terkawal.
 - [ ] **Fasa 3: Telemetry Ingestion & Digital Twin**: Validasi kualiti data, penjejakan status dinamik, dan pengiraan skor kesihatan (*Health Score*).
 - [ ] **Fasa 4: Anomaly Detection Engine**: Model Statistical Z-Score, Rolling Window, dan Isolation Forest.
@@ -208,6 +208,54 @@ Bagi mengelakkan sebarang konflik dengan perkhidmatan lain yang sedang aktif pad
 
 ---
 
-## 8. Lesen
+## 8. Panduan Pemasangan & Pembangunan Tempatan (Local Setup)
+
+### 8.1 Keperluan Sistem
+* Linux / macOS / WSL2 (Windows)
+* Python 3.11+ (Disahkan pada Python 3.13)
+* Docker & Docker Compose v2+
+* Git
+
+### 8.2 Langkah Permulaan
+
+```bash
+# 1. Klon repositori
+git clone https://github.com/demie24/nexus.git
+cd nexus
+
+# 2. Bina dan aktifkan Python virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Pasang kebergantungan (dependencies)
+pip install -r requirements.txt
+
+# 4. Sediakan konfigurasi environment
+cp .env.example .env
+
+# 5. Mulakan perkhidmatan infrastruktur (PostgreSQL, Redis, Mosquitto MQTT)
+docker compose up -d
+
+# 6. Jalankan migrasi pangkalan data melalui Alembic
+alembic upgrade head
+
+# 7. Jalankan ujian automatik & liputan kod
+pytest -v --cov=apps --cov=services --cov=database tests/
+
+# 8. Mulakan pelayan API FastAPI secara tempatan
+uvicorn apps.api.main:app --host 0.0.0.0 --port 8080 --reload
+```
+
+### 8.3 Endpoint Pantas
+* **Dokumentasi Interaktif (Swagger UI):** `http://localhost:8080/docs`
+* **Dokumentasi ReDoc:** `http://localhost:8080/redoc`
+* **Pemeriksaan Kesihatan (Liveness):** `http://localhost:8080/health`
+* **Pemeriksaan Ketersediaan (Readiness):** `http://localhost:8080/ready`
+* **Metrik Operasi:** `http://localhost:8080/metrics`
+
+---
+
+## 9. Lesen
 
 Dilesenkan di bawah [MIT License](LICENSE).
+
