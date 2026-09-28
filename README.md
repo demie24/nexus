@@ -192,7 +192,7 @@ Bagi mengelakkan sebarang konflik dengan perkhidmatan lain yang sedang aktif pad
 
 - [x] **Discovery & GitHub Setup**: Pemeriksaan persekitaran, seni bina, dan inisialisasi git repository.
 - [x] **Fasa 1: Foundation & Core Infrastructure**: Pydantic schemas, SQLAlchemy models, Alembic migrations, security foundation, FastAPI gateway, dan pytest test suites (30 tests, 97% coverage).
-- [ ] **Fasa 2: Virtual Factory Simulator**: Penjana telemetri sintetik realistik untuk mesin M01-M06 dengan suntikan kecacatan terkawal.
+- [x] **Fasa 2: Virtual Factory Simulator**: Penjana telemetri sintetik realistik (M01-M06 merentasi Line 1 & Line 2), gandingan fizik termomekanikal, 5 senario kerosakan, jam simulasi (time dilation), pengangkutan MQTT & PostgreSQL, dan CLI `nexus-sim` (52 tests lulus).
 - [ ] **Fasa 3: Telemetry Ingestion & Digital Twin**: Validasi kualiti data, penjejakan status dinamik, dan pengiraan skor kesihatan (*Health Score*).
 - [ ] **Fasa 4: Anomaly Detection Engine**: Model Statistical Z-Score, Rolling Window, dan Isolation Forest.
 - [ ] **Fasa 5: Predictive Intelligence**: Ramalan kebarangkalian kegagalan (*Failure Probability*) dan baki jangka hayat mesin (*RUL*).
@@ -252,6 +252,19 @@ uvicorn apps.api.main:app --host 0.0.0.0 --port 8080 --reload
 * **Pemeriksaan Kesihatan (Liveness):** `http://localhost:8080/health`
 * **Pemeriksaan Ketersediaan (Readiness):** `http://localhost:8080/ready`
 * **Metrik Operasi:** `http://localhost:8080/metrics`
+
+### 8.4 Menjalankan Virtual Factory Simulator (CLI)
+
+```bash
+# Mulakan penstriman telemetri berterusan (ke memori, database & MQTT broker)
+python -m apps.simulator.cli start --interval 1.0 --time-scale 5.0 --transports memory,db,mqtt
+
+# Pemicu senario kerosakan galas bebola (bearing wear) pada mesin M03
+python -m apps.simulator.cli scenario bearing_degradation --machine M03 --severity 0.85
+
+# Jalankan ujian penanda aras throughput (benchmark)
+python -m apps.simulator.cli benchmark --ticks 500
+```
 
 ---
 

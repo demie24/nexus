@@ -30,6 +30,9 @@ dependencies = [
     "scikit-learn>=1.5.0"
 ]
 
+[project.scripts]
+nexus-sim = "apps.simulator.cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.3.0",

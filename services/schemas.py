@@ -14,12 +14,15 @@ from pydantic import BaseModel, Field, ConfigDict
 # Enums
 # ---------------------------------------------------------------------------
 class OperatingStatus(str, Enum):
+    OPERATING = "OPERATING"
     NORMAL = "NORMAL"
+    IDLE = "IDLE"
     DEGRADED = "DEGRADED"
     WARNING = "WARNING"
     CRITICAL = "CRITICAL"
     SHUTDOWN = "SHUTDOWN"
     MAINTENANCE = "MAINTENANCE"
+    FAILED = "FAILED"
 
 
 class SeverityLevel(str, Enum):
@@ -63,6 +66,8 @@ class MachineBase(BaseModel):
     nominal_rpm: float = Field(default=1500.0, ge=0.0)
     max_temperature_c: float = Field(default=95.0, ge=0.0)
     max_vibration_mms: float = Field(default=8.0, ge=0.0)
+    rated_load: float = Field(default=1.0, ge=0.0)
+    maintenance_status: str = Field(default="OK")
 
 
 class MachineCreate(MachineBase):
@@ -84,10 +89,12 @@ class TelemetryBase(BaseModel):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     temperature: float = Field(..., description="Operating temperature in Celsius")
     vibration: float = Field(..., description="Vibration velocity in mm/s")
+    pressure: float = Field(default=2.5, description="Operating pressure in bar")
     current: float = Field(..., description="Electric current in Amperes")
     voltage: float = Field(default=400.0, description="Operating voltage in Volts")
     rpm: float = Field(..., description="Rotations per minute")
     power_kw: float = Field(..., description="Active power consumption in kW")
+    load: float = Field(default=1.0, ge=0.0, description="Operating load percentage / factor")
     output_rate: float = Field(..., description="Production units per hour")
     efficiency: float = Field(default=100.0, ge=0.0, le=100.0, description="Operating efficiency %")
     quality_indicator: float = Field(default=1.0, ge=0.0, le=1.0, description="Data quality score")

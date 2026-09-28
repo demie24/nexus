@@ -25,6 +25,8 @@ class MachineModel(Base):
     nominal_rpm: Mapped[float] = mapped_column(Float, default=1500.0)
     max_temperature_c: Mapped[float] = mapped_column(Float, default=95.0)
     max_vibration_mms: Mapped[float] = mapped_column(Float, default=8.0)
+    rated_load: Mapped[float] = mapped_column(Float, default=1.0)
+    maintenance_status: Mapped[str] = mapped_column(String(50), default="OK")
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -58,10 +60,12 @@ class TelemetryModel(Base):
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     temperature: Mapped[float] = mapped_column(Float, nullable=False)
     vibration: Mapped[float] = mapped_column(Float, nullable=False)
+    pressure: Mapped[float] = mapped_column(Float, default=2.5)
     current: Mapped[float] = mapped_column(Float, nullable=False)
     voltage: Mapped[float] = mapped_column(Float, default=400.0)
     rpm: Mapped[float] = mapped_column(Float, nullable=False)
     power_kw: Mapped[float] = mapped_column(Float, nullable=False)
+    load: Mapped[float] = mapped_column(Float, default=1.0)
     output_rate: Mapped[float] = mapped_column(Float, nullable=False)
     efficiency: Mapped[float] = mapped_column(Float, default=100.0)
     quality_indicator: Mapped[float] = mapped_column(Float, default=1.0)
