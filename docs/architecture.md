@@ -25,18 +25,18 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 └──────────────────┬───────────────────────────────┬─────────────────────┘
                    │ Synchronous State Update      │ Asynchronous Event
                    ▼                               ▼
-┌─────────────────────────────────────┐ ┌────────────────────────────────┐ ┌────────────────────────────────┐
-│      DIGITAL TWIN ENGINE            │ │   ANOMALY DETECTION ENGINE     │ │ PREDICTIVE INTELLIGENCE ENGINE │
-│  - Deterministic State Transitions  │ │  - Feature Extraction (Rolling)│ │  - Multi-Horizon Risk Forecast │
-│  - Dynamic Freshness Tracking       │ │  - Detector A: Statistical Z   │ │    (60m, 120m, 240m, 360m)     │
-│    (FRESH <= 60s, STALE, UNKNOWN)   │ │  - Detector B: Rolling Trend   │ │  - Calibrated Probabilities    │
-│  - Health Score Calculation         │ │  - Detector C: Isolation Forest│ │  - Quantile RUL Bounds [lo, hi]│
-│  - Enterprise Factory Snapshot      │ │  - Sensor vs Machine Classifier│ │  - Health Trajectory Forecast  │
-│  - Fast In-Memory Cache             │ │  - Multi-Detector Evidence Fuse│ │  - Factor Attribution Explains │
-│                                     │ │  - Temporal Persistence State  │ │  - Cold Start Guard (< 15 smp) │
-└──────────────────┬──────────────────┘ └────────────────┬───────────────┘ └────────────────┬───────────────┘
-                   │                                     │                                  │
-                   └──────────────────┬──────────────────┴──────────────────────────────────┘
+┌─────────────────────────────────────┐ ┌────────────────────────────────┐ ┌────────────────────────────────┐ ┌────────────────────────────────┐
+│      DIGITAL TWIN ENGINE            │ │   ANOMALY DETECTION ENGINE     │ │ PREDICTIVE INTELLIGENCE ENGINE │ │ ROOT CAUSE ANALYSIS & DIAGS    │
+│  - Deterministic State Transitions  │ │  - Feature Extraction (Rolling)│ │  - Multi-Horizon Risk Forecast │ │  - Causal Dependency Graph     │
+│  - Dynamic Freshness Tracking       │ │  - Detector A: Statistical Z   │ │    (60m, 120m, 240m, 360m)     │ │  - Physical Consistency Engine │
+│    (FRESH <= 60s, STALE, UNKNOWN)   │ │  - Detector B: Rolling Trend   │ │  - Calibrated Probabilities    │ │  - Lead-Lag Cross-Correlation  │
+│  - Health Score Calculation         │ │  - Detector C: Isolation Forest│ │  - Quantile RUL Bounds [lo, hi]│ │  - Multi-Source Evidence Fuse  │
+│  - Enterprise Factory Snapshot      │ │  - Sensor vs Machine Classifier│ │  - Health Trajectory Forecast  │ │  - Top-K Ranked Explanations   │
+│  - Fast In-Memory Cache             │ │  - Multi-Detector Evidence Fuse│ │  - Factor Attribution Explains │ │  - Engineering Text Reports    │
+│                                     │ │  - Temporal Persistence State  │ │  - Cold Start Guard (< 15 smp) │ │  - Cold Start / Fallback Guard │
+└──────────────────┬──────────────────┘ └────────────────┬───────────────┘ └────────────────┬───────────────┘ └────────────────┬───────────────┘
+                   │                                     │                                  │                                  │
+                   └──────────────────┬──────────────────┴──────────────────────────────────┴──────────────────────────────────┘
                                       ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                    NEXUS API GATEWAY (FastAPI)                         │
@@ -46,6 +46,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 │  - `/api/v1/factory/state` (Factory Digital Twin Snapshot)             │
 │  - `/api/v1/anomalies` (List, Detail, On-Demand Analysis, Status)      │
 │  - `/api/v1/predictions` (List, Detail, On-Demand Analysis, Horizons)  │
+│  - `/api/v1/diagnostics` (List, Detail, On-Demand RCA Analysis)        │
 │  - `/api/v1/simulator` (Control, Scenario Injection, Ticks)            │
 │  - `/api/v1/audit` (Governance & Immutable Audit Logs)                 │
 └────────────────────────────────────────────────────────────────────────┘
@@ -62,6 +63,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 | **Digital Twin Layer** | Evaluates deterministic machine health, failure probability, and data freshness. | P95 $< 25\text{ ms}$ |
 | **Anomaly Intelligence** | Unsupervised multi-layer anomaly detection (Statistical, Trend, Isolation Forest) and physical classification. | P95 $< 30\text{ ms}$ (Target: $< 200\text{ ms}$) |
 | **Predictive Intelligence** | Multi-horizon risk forecasting (1h, 2h, 4h, 6h), quantile RUL uncertainty interval, degradation trajectory. | P95 $= 26.2\text{ ms}$ (Target: $< 200\text{ ms}$) |
+| **Root Cause Analysis (RCA)** | Causal graph traversal, physical consistency validation, lead-lag cross-correlation, and evidence fusion ranking. | P95 $= 5.59\text{ ms}$ (Target: $< 300\text{ ms}$) |
 | **API Gateway Layer** | Exposes versioned REST endpoints with CORS, structured validation, and security headers. | Sub-millisecond routing overhead |
 
 ---
@@ -71,5 +73,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 Every record in the NEXUS system carries an immutable `DataProvenance` tag:
 * `OBSERVED`: Verified real or primary operational telemetry stream.
 * `PREDICTED`: Statistical or machine learning model forecast (Phase 5).
+* `DIAGNOSED`: Root cause analysis and fault attribution record (Phase 6).
 * `SIMULATED`: Counterfactual simulation or What-If scenario (Phase 7).
 * `RECOMMENDED`: Prescriptive action derived from the Decision Engine (Phase 8).
+

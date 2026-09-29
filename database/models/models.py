@@ -47,6 +47,9 @@ class MachineModel(Base):
     predictions: Mapped[List["PredictionModel"]] = relationship(
         "PredictionModel", back_populates="machine", cascade="all, delete-orphan"
     )
+    diagnostics: Mapped[List["DiagnosticModel"]] = relationship(
+        "DiagnosticModel", back_populates="machine", cascade="all, delete-orphan"
+    )
     recommendations: Mapped[List["RecommendationModel"]] = relationship(
         "RecommendationModel", back_populates="machine", cascade="all, delete-orphan"
     )
@@ -231,3 +234,33 @@ class AuditLogModel(Base):
         nullable=False,
         index=True
     )
+
+
+class DiagnosticModel(Base):
+    __tablename__ = "diagnostics"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    diagnostic_id: Mapped[str] = mapped_column(String(100), unique=True, nullable=False, index=True)
+    machine_id: Mapped[str] = mapped_column(String(50), ForeignKey("machines.id"), nullable=False, index=True)
+    incident_id: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    likely_cause: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
+    evidence_score: Mapped[float] = mapped_column(Float, nullable=False)
+    confidence: Mapped[str] = mapped_column(String(20), default="LOW", nullable=False)
+    ranking: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    evidence_summary: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    text_report: Mapped[str] = mapped_column(Text, nullable=False)
+    metadata_info: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    provenance: Mapped[str] = mapped_column(String(20), default="DIAGNOSED", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    machine: Mapped["MachineModel"] = relationship("MachineModel", back_populates="diagnostics")
+
+    __table_args__ = (
+        Index("ix_diagnostics_machine_time", "machine_id", "timestamp"),
+    )
+

@@ -10,6 +10,7 @@ from apps.api.routers.simulator import router as simulator_router
 from apps.api.routers.digital_twin import router as factory_router
 from apps.api.routers.anomalies import router as anomalies_router
 from apps.api.routers.predictions import router as predictions_router
+from apps.api.routers.diagnostics import router as diagnostics_router
 
 __all__ = [
     "health_router",
@@ -20,4 +21,6 @@ __all__ = [
     "factory_router",
     "anomalies_router",
     "predictions_router",
+    "diagnostics_router",
 ]
+

@@ -82,6 +82,39 @@ class DataProvenance(str, Enum):
     PREDICTED = "PREDICTED"
     SIMULATED = "SIMULATED"
     RECOMMENDED = "RECOMMENDED"
+    DIAGNOSED = "DIAGNOSED"
+
+
+class RootCauseType(str, Enum):
+    BEARING_DEGRADATION = "BEARING_DEGRADATION"
+    COOLING_DEGRADATION = "COOLING_DEGRADATION"
+    OVERLOAD = "OVERLOAD"
+    MOTOR_INEFFICIENCY = "MOTOR_INEFFICIENCY"
+    SENSOR_ANOMALY = "SENSOR_ANOMALY"
+    UNKNOWN = "UNKNOWN"
+
+
+class EvidenceSource(str, Enum):
+    OBSERVED = "OBSERVED"
+    GRAPH = "GRAPH"
+    PHYSICAL_CONSISTENCY = "PHYSICAL_CONSISTENCY"
+    TEMPORAL = "TEMPORAL"
+    CORRELATION = "CORRELATION"
+    MODEL_DERIVED = "MODEL_DERIVED"
+
+
+class PhysicalConsistencyStatus(str, Enum):
+    CONSISTENT = "CONSISTENT"
+    INCONSISTENT = "INCONSISTENT"
+    AMBIGUOUS = "AMBIGUOUS"
+
+
+class SignalDirection(str, Enum):
+    INCREASING = "INCREASING"
+    DECREASING = "DECREASING"
+    STABLE = "STABLE"
+    SPIKE = "SPIKE"
+    STEP_CHANGE = "STEP_CHANGE"
 
 
 # ---------------------------------------------------------------------------
@@ -480,4 +513,117 @@ class BatchIngestionResult(BaseModel):
     duplicate_count: int
     rejected_count: int
     results: List[IngestionResult] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Phase 6: Root Cause Analysis (RCA) & Diagnostics Schemas
+# ---------------------------------------------------------------------------
+class EvidenceItem(BaseModel):
+    signal: str = Field(..., description="Observed sensor signal or derived metric")
+    direction: SignalDirection = Field(..., description="Direction of signal movement")
+    strength: float = Field(..., ge=0.0, le=1.0, description="Normalized strength of evidence [0, 1]")
+    source: EvidenceSource = Field(..., description="Source of evidence")
+    description: str = Field(..., description="Explainable description of the evidence")
+    observed_value: Optional[float] = Field(None, description="Current or window-average observed value")
+    baseline_value: Optional[float] = Field(None, description="Expected nominal baseline value")
+    pct_deviation: Optional[float] = Field(None, description="Percentage deviation from baseline")
+
+
+class CauseCandidate(BaseModel):
+    cause: RootCauseType = Field(..., description="Identified candidate root cause")
+    rank: int = Field(..., ge=0, description="Rank position (1 is most likely)")
+    evidence_score: float = Field(..., ge=0.0, le=1.0, description="Evidence score [0, 1]")
+    confidence: str = Field(..., description="Confidence rating: HIGH, MEDIUM, LOW")
+    physical_consistency_status: PhysicalConsistencyStatus = Field(..., description="Physical consistency check result")
+    evidence: List[EvidenceItem] = Field(default_factory=list, description="Itemized supporting evidence")
+    summary: str = Field(default="", description="Explanatory rationale for this candidate")
+
+
+class CorrelationEvidence(BaseModel):
+    signal_a: str
+    signal_b: str
+    method: str = "spearman"
+    coefficient: float
+    lag_ticks: int = 0
+    relationship: str
+    interpretation: str
+
+
+class DiagnosticMetadata(BaseModel):
+    diagnostic_version: str = "v1.0.0"
+    feature_version: str = "v1.0.0"
+    rule_version: str = "v1.0.0"
+    analysis_timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    input_window: int = 30
+    machine_id: str
+    model_version: str = "v1.0.0"
+    incident_id: Optional[str] = None
+
+
+class DiagnosticBase(BaseModel):
+    diagnostic_id: str
+    machine_id: str
+    incident_id: Optional[str] = None
+    timestamp: datetime
+    likely_cause: RootCauseType
+    evidence_score: float = Field(..., ge=0.0, le=1.0)
+    confidence: str
+    ranking: List[CauseCandidate] = Field(default_factory=list)
+    evidence_summary: List[EvidenceItem] = Field(default_factory=list)
+    text_report: str
+    metadata_info: Dict[str, Any] = Field(default_factory=dict)
+    provenance: DataProvenance = DataProvenance.DIAGNOSED
+
+
+class DiagnosticCreate(DiagnosticBase):
+    pass
+
+
+class Diagnostic(DiagnosticBase):
+    id: int
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class DiagnosticReport(BaseModel):
+    diagnostic_id: str
+    machine_id: str
+    incident_id: Optional[str] = None
+    timestamp: datetime
+    likely_cause: RootCauseType
+    evidence_score: float
+    confidence: str
+    ranking: List[CauseCandidate]
+    evidence_summary: List[EvidenceItem]
+    alternative_causes: List[CauseCandidate] = Field(default_factory=list)
+    correlations: List[CorrelationEvidence] = Field(default_factory=list)
+    graph_paths: Dict[str, List[str]] = Field(default_factory=dict)
+    text_report: str
+    metadata_info: Dict[str, Any]
+    provenance: DataProvenance = DataProvenance.DIAGNOSED
+
+
+class DiagnosticAnalysisRequest(BaseModel):
+    machine_id: str = Field(..., description="Target machine ID")
+    incident_id: Optional[str] = Field(None, description="Optional incident ID for incident-level RCA")
+    start_time: Optional[datetime] = Field(None, description="Start timestamp of analysis window")
+    end_time: Optional[datetime] = Field(None, description="End timestamp of analysis window (no future leakage)")
+    window_size: Optional[int] = Field(30, ge=5, le=300, description="Telemetry window size in ticks")
+    persist: bool = Field(True, description="Whether to persist diagnostic record in database")
+
+
+class DiagnosticAnalysisResponse(BaseModel):
+    diagnostic_id: str
+    machine_id: str
+    incident_id: Optional[str] = None
+    timestamp: datetime
+    likely_cause: RootCauseType
+    evidence_score: float
+    confidence: str
+    ranking: List[CauseCandidate]
+    evidence_summary: List[EvidenceItem]
+    text_report: str
+    metadata_info: Dict[str, Any]
+
 

@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc
 
 from database.session import get_db
-from database.models.models import MachineModel, TelemetryModel, AnomalyModel, PredictionModel, MachineStateModel
+from database.models.models import MachineModel, TelemetryModel, AnomalyModel, PredictionModel, MachineStateModel, DiagnosticModel
 from services.schemas import (
     Machine,
     MachineCreate,
@@ -22,6 +22,7 @@ from services.schemas import (
     Prediction,
     RiskForecastResponse,
     RULResponse,
+    Diagnostic,
 )
 from services.digital_twin.engine import get_digital_twin_engine
 from services.anomaly.engine import get_anomaly_engine
@@ -214,3 +215,26 @@ def get_machine_rul(machine_id: str, db: Session = Depends(get_db)):
     engine = get_prediction_engine()
     analysis = engine.predict(machine_id=machine_id, current_health=curr_health)
     return analysis.rul
+
+
+@router.get("/{machine_id}/diagnostics", response_model=List[Diagnostic])
+def get_machine_diagnostics(
+    machine_id: str,
+    limit: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """Retrieves historical root cause analysis diagnostic reports for a machine."""
+    machine = db.query(MachineModel).filter(MachineModel.id == machine_id).first()
+    if not machine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine '{machine_id}' not found in registry"
+        )
+    return (
+        db.query(DiagnosticModel)
+        .filter(DiagnosticModel.machine_id == machine_id)
+        .order_by(desc(DiagnosticModel.timestamp))
+        .limit(limit)
+        .all()
+    )
+
