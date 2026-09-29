@@ -361,8 +361,114 @@ class PredictionAnalysisResponse(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Simulation Schema ("What-If" Scenario & Counterfactuals)
+# Phase 7: What-If Counterfactual Simulation Schemas
 # ---------------------------------------------------------------------------
+class CounterfactualScenarioType(str, Enum):
+    DO_NOTHING = "DO_NOTHING"
+    LOAD_MODULATION = "LOAD_MODULATION"
+    COOLING_BOOST = "COOLING_BOOST"
+    SCHEDULED_SHUTDOWN = "SCHEDULED_SHUTDOWN"
+    EMERGENCY_STOP = "EMERGENCY_STOP"
+
+
+class SimulationStatus(str, Enum):
+    CREATED = "CREATED"
+    RUNNING = "RUNNING"
+    COMPLETED = "COMPLETED"
+    FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+class OutcomeMetrics(BaseModel):
+    initial_health: float
+    final_health: float
+    health_delta: float
+    initial_failure_probability: float
+    final_failure_probability: float
+    risk_delta: float
+    initial_rul: Optional[float] = None
+    final_rul: Optional[float] = None
+    rul_delta: Optional[float] = None
+    peak_temperature: float
+    peak_vibration: float
+    total_output: float
+    throughput_loss: float
+    downtime: float = 0.0
+    recovery_time: Optional[float] = None
+
+
+class BaselineComparison(BaseModel):
+    baseline_rul: Optional[float] = None
+    scenario_rul: Optional[float] = None
+    rul_delta_hours: Optional[float] = None
+    baseline_failure_probability: float
+    scenario_failure_probability: float
+    risk_delta_percentage_points: float
+    risk_reduction_pct: Optional[float] = None
+    baseline_output: float
+    scenario_output: float
+    throughput_loss_pct: float
+    peak_temp_delta: float
+
+
+class DigitalTwinSnapshot(BaseModel):
+    snapshot_id: str
+    factory_id: str = "NEXUS-FACTORY-01"
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    machines: List[str] = Field(default_factory=list)
+    machine_states: Dict[str, Any] = Field(default_factory=dict)
+    telemetry_context: Dict[str, Any] = Field(default_factory=dict)
+    prediction_context: Dict[str, Any] = Field(default_factory=dict)
+    state_hash: str
+
+
+class WhatIfSimulationRequest(BaseModel):
+    machine_id: str = Field(..., description="Target machine ID")
+    scenario_type: CounterfactualScenarioType = Field(..., description="Intervention scenario")
+    parameters: Dict[str, Any] = Field(default_factory=dict, description="Configurable parameters (load_reduction, cooling_multiplier, etc.)")
+    horizon_hours: float = Field(default=4.0, ge=0.5, le=48.0, description="Forward simulation horizon in hours")
+    seed: int = Field(default=42, description="Random seed for deterministic replay")
+    snapshot_id: Optional[str] = Field(None, description="Optional existing snapshot ID; creates new snapshot if None")
+    persist: bool = Field(default=True, description="Whether to persist simulation result to database")
+
+
+class WhatIfSimulationResponse(BaseModel):
+    simulation_id: str
+    snapshot_id: str
+    machine_id: str
+    scenario: CounterfactualScenarioType
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    horizon_hours: float
+    status: SimulationStatus = SimulationStatus.COMPLETED
+    result: OutcomeMetrics
+    baseline_comparison: Optional[BaselineComparison] = None
+    affected_cascade_machines: List[str] = Field(default_factory=list)
+    cascade_impact: Dict[str, Any] = Field(default_factory=dict)
+    provenance: DataProvenance = DataProvenance.SIMULATED
+    metadata_info: Dict[str, Any] = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ScenarioCompareRequest(BaseModel):
+    machine_id: str
+    scenarios: Optional[List[WhatIfSimulationRequest]] = None
+    simulation_ids: Optional[List[str]] = None
+    horizon_hours: float = Field(default=4.0, ge=0.5, le=48.0)
+    snapshot_id: Optional[str] = None
+    seed: int = Field(default=42)
+    persist: bool = Field(default=True)
+
+
+class ScenarioCompareResponse(BaseModel):
+    comparison_id: str
+    snapshot_id: str
+    machine_id: str
+    horizon_hours: float
+    scenarios: List[WhatIfSimulationResponse] = Field(default_factory=list)
+    matrix: List[Dict[str, Any]] = Field(default_factory=list)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
 class SimulationScenario(BaseModel):
     scenario_name: str
     target_machine_id: str
@@ -390,6 +496,7 @@ class SimulationResult(SimulationResultBase):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(from_attributes=True)
+
 
 
 # ---------------------------------------------------------------------------

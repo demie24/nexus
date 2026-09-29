@@ -21,7 +21,9 @@ from apps.api.routers import (
     anomalies_router,
     predictions_router,
     diagnostics_router,
+    simulation_router,
 )
+
 from database.base import Base
 from database.session import engine
 
@@ -111,6 +113,8 @@ app.include_router(factory_router, prefix=settings.API_V1_PREFIX)
 app.include_router(anomalies_router, prefix=settings.API_V1_PREFIX)
 app.include_router(predictions_router, prefix=settings.API_V1_PREFIX)
 app.include_router(diagnostics_router, prefix=settings.API_V1_PREFIX)
+app.include_router(simulation_router, prefix=settings.API_V1_PREFIX)
+
 
 
 @app.get("/", tags=["Root"])

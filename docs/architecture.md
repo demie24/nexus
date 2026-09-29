@@ -47,6 +47,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 │  - `/api/v1/anomalies` (List, Detail, On-Demand Analysis, Status)      │
 │  - `/api/v1/predictions` (List, Detail, On-Demand Analysis, Horizons)  │
 │  - `/api/v1/diagnostics` (List, Detail, On-Demand RCA Analysis)        │
+│  - `/api/v1/simulation` (What-If Scenarios, Compare, Forked Sandboxes) │
 │  - `/api/v1/simulator` (Control, Scenario Injection, Ticks)            │
 │  - `/api/v1/audit` (Governance & Immutable Audit Logs)                 │
 └────────────────────────────────────────────────────────────────────────┘
@@ -64,6 +65,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 | **Anomaly Intelligence** | Unsupervised multi-layer anomaly detection (Statistical, Trend, Isolation Forest) and physical classification. | P95 $< 30\text{ ms}$ (Target: $< 200\text{ ms}$) |
 | **Predictive Intelligence** | Multi-horizon risk forecasting (1h, 2h, 4h, 6h), quantile RUL uncertainty interval, degradation trajectory. | P95 $= 26.2\text{ ms}$ (Target: $< 200\text{ ms}$) |
 | **Root Cause Analysis (RCA)** | Causal graph traversal, physical consistency validation, lead-lag cross-correlation, and evidence fusion ranking. | P95 $= 5.59\text{ ms}$ (Target: $< 300\text{ ms}$) |
+| **What-If Simulation Engine** | Forks sandboxed machine states from immutable snapshots, integrates forward physics, evaluates multi-machine cascade. | P95 $= 8.25\text{ ms}$ (Target: $< 500\text{ ms}$) |
 | **API Gateway Layer** | Exposes versioned REST endpoints with CORS, structured validation, and security headers. | Sub-millisecond routing overhead |
 
 ---
@@ -73,6 +75,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 Every record in the NEXUS system carries an immutable `DataProvenance` tag:
 * `OBSERVED`: Verified real or primary operational telemetry stream.
 * `PREDICTED`: Statistical or machine learning model forecast (Phase 5).
+
 * `DIAGNOSED`: Root cause analysis and fault attribution record (Phase 6).
 * `SIMULATED`: Counterfactual simulation or What-If scenario (Phase 7).
 * `RECOMMENDED`: Prescriptive action derived from the Decision Engine (Phase 8).

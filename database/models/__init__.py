@@ -9,6 +9,7 @@ from database.models.models import (
     AnomalyModel,
     PredictionModel,
     SimulationModel,
+    SimulationSnapshotModel,
     RecommendationModel,
     AuditLogModel,
 )
@@ -20,6 +21,8 @@ __all__ = [
     "AnomalyModel",
     "PredictionModel",
     "SimulationModel",
+    "SimulationSnapshotModel",
     "RecommendationModel",
     "AuditLogModel",
 ]
+

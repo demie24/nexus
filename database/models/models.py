@@ -50,9 +50,13 @@ class MachineModel(Base):
     diagnostics: Mapped[List["DiagnosticModel"]] = relationship(
         "DiagnosticModel", back_populates="machine", cascade="all, delete-orphan"
     )
+    simulations: Mapped[List["SimulationModel"]] = relationship(
+        "SimulationModel", back_populates="machine", cascade="all, delete-orphan"
+    )
     recommendations: Mapped[List["RecommendationModel"]] = relationship(
         "RecommendationModel", back_populates="machine", cascade="all, delete-orphan"
     )
+
 
 
 class TelemetryModel(Base):
@@ -174,22 +178,57 @@ class SimulationModel(Base):
     __tablename__ = "simulations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    simulation_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    snapshot_id: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
     scenario_name: Mapped[str] = mapped_column(String(100), nullable=False)
-    target_machine_id: Mapped[str] = mapped_column(String(50), ForeignKey("machines.id"), nullable=False)
+    target_machine_id: Mapped[str] = mapped_column(String(50), ForeignKey("machines.id"), nullable=False, index=True)
     action_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    baseline_production_units: Mapped[float] = mapped_column(Float, nullable=False)
-    simulated_production_units: Mapped[float] = mapped_column(Float, nullable=False)
-    production_loss_pct: Mapped[float] = mapped_column(Float, nullable=False)
-    simulated_failure_probability: Mapped[float] = mapped_column(Float, nullable=False)
-    risk_reduction_pct: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(String(20), default="COMPLETED", nullable=False)
+    horizon_hours: Mapped[float] = mapped_column(Float, default=4.0, nullable=False)
+    parameters: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    baseline_production_units: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    simulated_production_units: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    production_loss_pct: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    simulated_failure_probability: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
+    risk_reduction_pct: Mapped[float] = mapped_column(Float, default=0.0, nullable=False)
     affected_cascade_machines: Mapped[Dict[str, Any]] = mapped_column(JSON, default=list)
-    recovery_time_hours: Mapped[float] = mapped_column(Float, default=1.0)
-    provenance: Mapped[str] = mapped_column(String(20), default="SIMULATED")
+    recovery_time_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=1.0)
+    outcome_metrics: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    baseline_comparison: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    random_seed: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    state_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    provenance: Mapped[str] = mapped_column(String(20), default="SIMULATED", nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(timezone.utc),
         nullable=False
     )
+
+    machine: Mapped["MachineModel"] = relationship("MachineModel", back_populates="simulations")
+
+    @property
+    def machine_id(self) -> str:
+        return self.target_machine_id
+
+
+class SimulationSnapshotModel(Base):
+    __tablename__ = "simulation_snapshots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    factory_id: Mapped[str] = mapped_column(String(50), default="NEXUS-FACTORY-01", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+    machines: Mapped[List[str]] = mapped_column(JSON, default=list, nullable=False)
+    machine_states: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    telemetry_context: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    prediction_context: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    state_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+
 
 
 class RecommendationModel(Base):
