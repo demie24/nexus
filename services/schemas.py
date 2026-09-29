@@ -500,6 +500,132 @@ class SimulationResult(SimulationResultBase):
 
 
 # ---------------------------------------------------------------------------
+# Phase 8: Multi-Criteria Decision Engine & Action Ranking Schemas
+# ---------------------------------------------------------------------------
+class PolicyProfileType(str, Enum):
+    BALANCED = "BALANCED"
+    SAFETY_FIRST = "SAFETY_FIRST"
+    PRODUCTION_FIRST = "PRODUCTION_FIRST"
+    CUSTOM = "CUSTOM"
+
+
+class ActionFeasibilityStatus(str, Enum):
+    FEASIBLE = "FEASIBLE"
+    INFEASIBLE = "INFEASIBLE"
+    UNKNOWN = "UNKNOWN"
+
+
+class RankStabilityLevel(str, Enum):
+    HIGH_STABILITY = "HIGH_STABILITY"
+    MODERATE_STABILITY = "MODERATE_STABILITY"
+    LOW_STABILITY = "LOW_STABILITY"
+
+
+class DecisionEngineStatus(str, Enum):
+    COMPLETED = "COMPLETED"
+    INSUFFICIENT_EVIDENCE = "INSUFFICIENT_EVIDENCE"
+    FAILED = "FAILED"
+
+
+class CriteriaWeights(BaseModel):
+    risk_weight: float = Field(default=0.25, ge=0.0, le=1.0, description="Weight for future failure risk reduction")
+    cost_weight: float = Field(default=0.15, ge=0.0, le=1.0, description="Weight for intervention operational cost")
+    production_weight: float = Field(default=0.20, ge=0.0, le=1.0, description="Weight for production throughput preservation")
+    downtime_weight: float = Field(default=0.15, ge=0.0, le=1.0, description="Weight for minimizing operational downtime")
+    recovery_weight: float = Field(default=0.10, ge=0.0, le=1.0, description="Weight for fast recovery time")
+    health_weight: float = Field(default=0.15, ge=0.0, le=1.0, description="Weight for machine health & RUL preservation")
+
+
+class DomainConstraints(BaseModel):
+    max_safe_temperature: float = Field(default=90.0, description="Max acceptable peak core temperature (°C)")
+    critical_failure_probability: float = Field(default=0.70, description="Max acceptable failure probability threshold [0, 1]")
+    max_allowed_downtime_hours: float = Field(default=8.0, description="Max acceptable operational downtime (hours)")
+    min_acceptable_rul_hours: float = Field(default=1.0, description="Minimum acceptable RUL threshold (hours)")
+
+
+class RawCriteriaValues(BaseModel):
+    risk: float = Field(..., description="Projected failure probability [0, 1]")
+    cost_rm: float = Field(..., description="Estimated operational/intervention cost in RM")
+    production_loss_pct: float = Field(..., description="Throughput loss percentage (%)")
+    downtime_hours: float = Field(..., description="Expected machine downtime (hours)")
+    recovery_time_hours: float = Field(..., description="Expected maintenance/recovery duration (hours)")
+    rul_hours: float = Field(..., description="Remaining useful life projection (hours)")
+    final_health: float = Field(..., description="Projected final health score [0, 100]")
+
+
+class NormalizedUtilities(BaseModel):
+    risk_utility: float = Field(..., ge=0.0, le=1.0)
+    cost_utility: float = Field(..., ge=0.0, le=1.0)
+    production_utility: float = Field(..., ge=0.0, le=1.0)
+    downtime_utility: float = Field(..., ge=0.0, le=1.0)
+    recovery_utility: float = Field(..., ge=0.0, le=1.0)
+    health_utility: float = Field(..., ge=0.0, le=1.0)
+
+
+class CandidateActionEvaluation(BaseModel):
+    rank: int = Field(..., ge=1, description="Rank order (1 = highest utility)")
+    action: CounterfactualScenarioType
+    action_label: str
+    parameters: Dict[str, Any] = Field(default_factory=dict)
+    decision_score: float = Field(..., ge=0.0, le=1.0, description="Weighted multi-criteria decision score")
+    feasibility: ActionFeasibilityStatus
+    feasibility_reasons: List[str] = Field(default_factory=list)
+    raw_criteria: RawCriteriaValues
+    utilities: NormalizedUtilities
+    key_benefits: List[str] = Field(default_factory=list)
+    key_risks: List[str] = Field(default_factory=list)
+    trade_offs: List[str] = Field(default_factory=list)
+    near_tie: bool = False
+    near_tie_with: Optional[str] = None
+
+
+class DecisionSensitivityProfile(BaseModel):
+    profile: PolicyProfileType
+    top_action: CounterfactualScenarioType
+    top_score: float
+    rankings: List[Dict[str, Any]] = Field(default_factory=list)
+
+
+class EvidenceReferences(BaseModel):
+    snapshot_id: str
+    simulation_ids: List[str] = Field(default_factory=list)
+    prediction_id: Optional[str] = None
+    anomaly_id: Optional[str] = None
+    diagnostic_id: Optional[str] = None
+    incident_id: Optional[str] = None
+
+
+class DecisionAnalysisRequest(BaseModel):
+    machine_id: str = Field(..., description="Target machine ID")
+    policy_profile: PolicyProfileType = Field(default=PolicyProfileType.BALANCED, description="Operational policy profile")
+    custom_weights: Optional[CriteriaWeights] = None
+    custom_constraints: Optional[DomainConstraints] = None
+    horizon_hours: float = Field(default=4.0, ge=0.5, le=48.0, description="Simulation horizon in hours")
+    snapshot_id: Optional[str] = Field(None, description="Optional snapshot ID to evaluate against")
+    persist: bool = Field(default=True, description="Whether to persist decision analysis to database")
+
+
+class DecisionAnalysisResponse(BaseModel):
+    decision_id: str
+    machine_id: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    status: DecisionEngineStatus = DecisionEngineStatus.COMPLETED
+    policy_profile: PolicyProfileType
+    criteria_weights: CriteriaWeights
+    constraints: DomainConstraints
+    ranked_candidates: List[CandidateActionEvaluation] = Field(default_factory=list)
+    top_recommended_candidate: Optional[CandidateActionEvaluation] = None
+    decision_explanation: str
+    decision_confidence: str = "HIGH"  # HIGH, MEDIUM, LOW
+    confidence_reasons: List[str] = Field(default_factory=list)
+    rank_stability: RankStabilityLevel = RankStabilityLevel.HIGH_STABILITY
+    rank_stability_reason: str
+    sensitivity_analysis: List[DecisionSensitivityProfile] = Field(default_factory=list)
+    evidence_references: EvidenceReferences
+    provenance: DataProvenance = DataProvenance.RECOMMENDED
+
+
+# ---------------------------------------------------------------------------
 # Recommendation Schema (Decision Support)
 # ---------------------------------------------------------------------------
 class RecommendationBase(BaseModel):
@@ -527,6 +653,7 @@ class Recommendation(RecommendationBase):
     approved_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
 
 
 # ---------------------------------------------------------------------------

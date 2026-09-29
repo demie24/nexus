@@ -12,6 +12,7 @@ from apps.api.routers.anomalies import router as anomalies_router
 from apps.api.routers.predictions import router as predictions_router
 from apps.api.routers.diagnostics import router as diagnostics_router
 from apps.api.routers.simulation import router as simulation_router
+from apps.api.routers.decisions import router as decisions_router
 
 __all__ = [
     "health_router",
@@ -24,6 +25,7 @@ __all__ = [
     "predictions_router",
     "diagnostics_router",
     "simulation_router",
+    "decisions_router",
 ]
 
 

@@ -38,6 +38,24 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
                    │                                     │                                  │                                  │
                    └──────────────────┬──────────────────┴──────────────────────────────────┴──────────────────────────────────┘
                                       ▼
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                WHAT-IF COUNTERFACTUAL SIMULATION ENGINE (Phase 7)                                          │
+│  - Immutable Snapshot Branching (Zero Live Mutex Contention) | Forked Sandboxes | Physical Multi-Step Trajectories         │
+│  - Evaluates Interventions: DO_NOTHING, LOAD_MODULATION (-20%, -40%), COOLING_BOOST, SHUTDOWN, EMERGENCY_STOP              │
+└─────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────┘
+                                                      │
+                                                      ▼
+┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                             MULTI-CRITERIA DECISION ENGINE & ACTION RANKING (Phase 8)                                      │
+│  - 6 Dimensionless Utility Criteria: Risk, Cost (RM), Production Loss %, Downtime, Recovery Time, Health / RUL             │
+│  - Physical & Policy Hard Constraints (P_fail <= 0.70, T_peak <= 90°C, Downtime <= 8h, RUL >= 1h) -> FEASIBLE / INFEASIBLE │
+│  - Configuration-Driven Policies (BALANCED, SAFETY_FIRST, PRODUCTION_FIRST, CUSTOM) with sum(w_i) = 1.0 Normalization     │
+│  - Candidate Ranking & Near-Tie Alerting (|Score_i - Score_{i+1}| <= 0.015)                                                │
+│  - Sensitivity Analysis across Policy Profiles (HIGH_STABILITY, MODERATE_STABILITY, LOW_STABILITY)                         │
+│  - Deterministic Trade-Off Explanations & Evidence References Linking Diagnostics, Predictions & Simulations               │
+└─────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────┘
+                                                      │
+                                                      ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                    NEXUS API GATEWAY (FastAPI)                         │
 │  - `/health`, `/ready`, `/metrics`                                     │
@@ -48,6 +66,8 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 │  - `/api/v1/predictions` (List, Detail, On-Demand Analysis, Horizons)  │
 │  - `/api/v1/diagnostics` (List, Detail, On-Demand RCA Analysis)        │
 │  - `/api/v1/simulation` (What-If Scenarios, Compare, Forked Sandboxes) │
+│  - `/api/v1/decisions` (On-Demand Multi-Criteria Ranking & History)    │
+│  - `/api/v1/decision-policies` (Policy Profiles & Weights Catalog)     │
 │  - `/api/v1/simulator` (Control, Scenario Injection, Ticks)            │
 │  - `/api/v1/audit` (Governance & Immutable Audit Logs)                 │
 └────────────────────────────────────────────────────────────────────────┘
@@ -66,6 +86,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 | **Predictive Intelligence** | Multi-horizon risk forecasting (1h, 2h, 4h, 6h), quantile RUL uncertainty interval, degradation trajectory. | P95 $= 26.2\text{ ms}$ (Target: $< 200\text{ ms}$) |
 | **Root Cause Analysis (RCA)** | Causal graph traversal, physical consistency validation, lead-lag cross-correlation, and evidence fusion ranking. | P95 $= 5.59\text{ ms}$ (Target: $< 300\text{ ms}$) |
 | **What-If Simulation Engine** | Forks sandboxed machine states from immutable snapshots, integrates forward physics, evaluates multi-machine cascade. | P95 $= 8.25\text{ ms}$ (Target: $< 500\text{ ms}$) |
+| **Multi-Criteria Decision Engine** | Normalizes multi-attribute utilities, enforces hard domain constraints, ranks candidate actions, evaluates sensitivity. | P95 $= 22.78\text{ ms}$ (Target: $< 200\text{ ms}$) |
 | **API Gateway Layer** | Exposes versioned REST endpoints with CORS, structured validation, and security headers. | Sub-millisecond routing overhead |
 
 ---

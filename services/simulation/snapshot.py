@@ -61,37 +61,66 @@ class DigitalTwinSnapshotManager:
         elif db is not None:
             # Query machine states from database
             db_machines = db.query(MachineModel).all()
-            for m in db_machines:
-                machines_list.append(m.id)
-                state_record = db.query(MachineStateModel).filter_by(machine_id=m.id).first()
-                if state_record:
-                    machine_states[m.id] = {
-                        "machine_id": m.id,
-                        "machine_name": m.name,
-                        "line_id": m.line_id,
-                        "machine_type": m.machine_type,
-                        "status": state_record.status,
-                        "freshness": state_record.freshness,
-                        "health_score": float(state_record.health_score),
-                        "failure_probability": float(state_record.failure_probability),
-                        "load_factor": float(state_record.load_factor),
-                        "maintenance_status": state_record.maintenance_status,
-                        "temperature": float(state_record.temperature),
-                        "vibration": float(state_record.vibration),
-                        "pressure": float(state_record.pressure),
-                        "current": float(state_record.current),
-                        "voltage": float(state_record.voltage),
-                        "rpm": float(state_record.rpm),
-                        "power_kw": float(state_record.power_kw),
-                        "efficiency": float(state_record.efficiency),
-                        "output_rate": float(state_record.output_rate),
-                        "last_telemetry_timestamp": state_record.last_telemetry_timestamp.isoformat() if state_record.last_telemetry_timestamp else None,
-                        "provenance": state_record.provenance,
-                    }
-                else:
-                    # Nominal default
-                    machine_states[m.id] = {
-                        "machine_id": m.id,
+            if db_machines:
+                for m in db_machines:
+                    machines_list.append(m.id)
+                    state_record = db.query(MachineStateModel).filter_by(machine_id=m.id).first()
+                    if state_record:
+                        machine_states[m.id] = {
+                            "machine_id": m.id,
+                            "machine_name": m.name,
+                            "line_id": m.line_id,
+                            "machine_type": m.machine_type,
+                            "status": state_record.status,
+                            "freshness": state_record.freshness,
+                            "health_score": float(state_record.health_score),
+                            "failure_probability": float(state_record.failure_probability),
+                            "load_factor": float(state_record.load_factor),
+                            "maintenance_status": state_record.maintenance_status,
+                            "temperature": float(state_record.temperature),
+                            "vibration": float(state_record.vibration),
+                            "pressure": float(state_record.pressure),
+                            "current": float(state_record.current),
+                            "voltage": float(state_record.voltage),
+                            "rpm": float(state_record.rpm),
+                            "power_kw": float(state_record.power_kw),
+                            "efficiency": float(state_record.efficiency),
+                            "output_rate": float(state_record.output_rate),
+                            "last_telemetry_timestamp": state_record.last_telemetry_timestamp.isoformat() if state_record.last_telemetry_timestamp else None,
+                            "provenance": state_record.provenance,
+                        }
+                    else:
+                        # Nominal default
+                        machine_states[m.id] = {
+                            "machine_id": m.id,
+                            "machine_name": m.name,
+                            "line_id": m.line_id,
+                            "machine_type": m.machine_type,
+                            "status": "OPERATING",
+                            "freshness": "FRESH",
+                            "health_score": 100.0,
+                            "failure_probability": 0.01,
+                            "load_factor": 1.0,
+                            "maintenance_status": "OK",
+                            "temperature": getattr(m, "nominal_temp_c", 65.0),
+                            "vibration": getattr(m, "nominal_vib_mms", 2.0),
+                            "pressure": 2.5,
+                            "current": 20.0,
+                            "voltage": 400.0,
+                            "rpm": getattr(m, "nominal_rpm", 1500.0),
+                            "power_kw": getattr(m, "nominal_power_kw", 15.0),
+                            "efficiency": 100.0,
+                            "output_rate": 60.0,
+                            "last_telemetry_timestamp": now.isoformat(),
+                            "provenance": "OBSERVED",
+                        }
+            else:
+                # Fallback to nominal factory spec when DB has no registered machines
+                spec = get_default_factory_spec()
+                for m in spec.all_machines():
+                    machines_list.append(m.machine_id)
+                    machine_states[m.machine_id] = {
+                        "machine_id": m.machine_id,
                         "machine_name": m.name,
                         "line_id": m.line_id,
                         "machine_type": m.machine_type,
@@ -103,13 +132,13 @@ class DigitalTwinSnapshotManager:
                         "maintenance_status": "OK",
                         "temperature": m.nominal_temp_c,
                         "vibration": m.nominal_vib_mms,
-                        "pressure": 2.5,
-                        "current": 20.0,
-                        "voltage": 400.0,
+                        "pressure": m.nominal_pressure_bar,
+                        "current": m.nominal_current_a,
+                        "voltage": m.nominal_voltage_v,
                         "rpm": m.nominal_rpm,
                         "power_kw": m.nominal_power_kw,
                         "efficiency": 100.0,
-                        "output_rate": 60.0,
+                        "output_rate": m.nominal_output_rate,
                         "last_telemetry_timestamp": now.isoformat(),
                         "provenance": "OBSERVED",
                     }

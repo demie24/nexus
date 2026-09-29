@@ -53,9 +53,13 @@ class MachineModel(Base):
     simulations: Mapped[List["SimulationModel"]] = relationship(
         "SimulationModel", back_populates="machine", cascade="all, delete-orphan"
     )
+    decisions: Mapped[List["DecisionModel"]] = relationship(
+        "DecisionModel", back_populates="machine", cascade="all, delete-orphan"
+    )
     recommendations: Mapped[List["RecommendationModel"]] = relationship(
         "RecommendationModel", back_populates="machine", cascade="all, delete-orphan"
     )
+
 
 
 
@@ -231,7 +235,36 @@ class SimulationSnapshotModel(Base):
 
 
 
+class DecisionModel(Base):
+    __tablename__ = "decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    decision_id: Mapped[str] = mapped_column(String(100), unique=True, index=True, nullable=False)
+    machine_id: Mapped[str] = mapped_column(String(50), ForeignKey("machines.id"), nullable=False, index=True)
+    snapshot_id: Mapped[str] = mapped_column(String(100), index=True, nullable=False)
+    policy_profile: Mapped[str] = mapped_column(String(50), nullable=False)
+    criteria_weights: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    constraints: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    candidate_actions: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    decision_scores: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    feasibility: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    rank_stability: Mapped[str] = mapped_column(String(50), default="HIGH_STABILITY", nullable=False)
+    confidence: Mapped[str] = mapped_column(String(20), default="HIGH", nullable=False)
+    evidence_references: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    decision_explanation: Mapped[str] = mapped_column(Text, nullable=False)
+    status: Mapped[str] = mapped_column(String(30), default="COMPLETED", nullable=False)
+    provenance: Mapped[str] = mapped_column(String(20), default="RECOMMENDED", nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    machine: Mapped["MachineModel"] = relationship("MachineModel", back_populates="decisions")
+
+
 class RecommendationModel(Base):
+
     __tablename__ = "recommendations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)

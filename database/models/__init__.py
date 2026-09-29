@@ -10,6 +10,8 @@ from database.models.models import (
     PredictionModel,
     SimulationModel,
     SimulationSnapshotModel,
+    DecisionModel,
+    DiagnosticModel,
     RecommendationModel,
     AuditLogModel,
 )
@@ -22,7 +24,10 @@ __all__ = [
     "PredictionModel",
     "SimulationModel",
     "SimulationSnapshotModel",
+    "DecisionModel",
+    "DiagnosticModel",
     "RecommendationModel",
     "AuditLogModel",
 ]
+
 

@@ -22,6 +22,7 @@ from apps.api.routers import (
     predictions_router,
     diagnostics_router,
     simulation_router,
+    decisions_router,
 )
 
 from database.base import Base
@@ -114,6 +115,7 @@ app.include_router(anomalies_router, prefix=settings.API_V1_PREFIX)
 app.include_router(predictions_router, prefix=settings.API_V1_PREFIX)
 app.include_router(diagnostics_router, prefix=settings.API_V1_PREFIX)
 app.include_router(simulation_router, prefix=settings.API_V1_PREFIX)
+app.include_router(decisions_router, prefix=settings.API_V1_PREFIX)
 
 
 
