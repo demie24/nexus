@@ -195,7 +195,7 @@ Bagi mengelakkan sebarang konflik dengan perkhidmatan lain yang sedang aktif pad
 - [x] **Fasa 2: Virtual Factory Simulator**: Penjana telemetri sintetik realistik (M01-M06 merentasi Line 1 & Line 2), gandingan fizik termomekanikal, 5 senario kerosakan, jam simulasi (time dilation), pengangkutan MQTT & PostgreSQL, dan CLI `nexus-sim` (52 tests lulus).
 - [x] **Fasa 3: Telemetry Ingestion & Digital Twin**: Pipeline penerimaan telemetri berdaya tahan tinggi, validasi batas fizik, dedup kriptografi SHA-256 (idempotency), penerimaan kelompok separa (*partial batch acceptance*), konsumer MQTT berkala, enjin Digital Twin dengan penjejakan kesegaran dinamik (*FRESH*, *STALE*, *UNKNOWN*), dan pemantauan latensi P95 (< 15 ms). Lihat [Dokumentasi Telemetri](docs/telemetry.md) & [Dokumentasi Digital Twin](docs/digital-twin.md).
 - [x] **Fasa 4: Anomaly Detection Engine**: Enjin pengesanan anomali berlapis: Detector A (Statistical Z-Score), Detector B (Rolling Trend, Slopes, Monotonic Streaks), Detector C (Unsupervised Scikit-Learn Isolation Forest), pengelas SENSOR_ANOMALY vs MACHINE_BEHAVIOR, fusi bukti berstruktur, pengurusan kitaran hayat temporal (DETECTED -> CONFIRMED -> ACTIVE -> RECOVERING -> RESOLVED), dan perlindungan cold-start. P95 latency: ~26.6 ms (Target: < 200 ms). Precision: 100%, Recall: 90.0%, F1: 94.7%. Lihat [Dokumentasi Anomaly Detection](docs/anomaly-detection.md) (83 tests lulus, 90% coverage).
-- [ ] **Fasa 5: Predictive Intelligence**: Ramalan kebarangkalian kegagalan (*Failure Probability*) dan baki jangka hayat mesin (*RUL*).
+- [x] **Fasa 5: Predictive Intelligence Engine**: Enjin ramalan kegagalan berasaskan trajektori degradasi sebenar: Ramalan risiko pelbagai horizon masa (60m, 120m, 240m, 360m) dengan jaminan konsistensi monotonik, unjuran trajektori kesihatan mesin (1h, 2h, 4h, 6h) membezakan data *OBSERVED* vs *PREDICTED*, anggaran baki jangka hayat mesin (*Remaining Useful Life - RUL*) dengan selang ketidaktentuan kuantil ($[rul_{lower}, rul_{upper}]$), atribusi faktor penyumbang risiko, dan perlindungan *cold-start* (< 15 sampel). Penanda aras berbanding Persistence & Linear baselines membuktikan pengurangan ralat RUL MAE sebanyak **51.6%** (4.006 jam vs 8.282 jam) dan kalibrasi Brier score unggul **0.0007**. Latensi P95: **26.2 ms** (Bajet: < 200 ms). Lihat [Dokumentasi Predictive Intelligence](docs/predictive-intelligence.md) (104 tests lulus, 93% coverage).
 - [ ] **Fasa 6: Root Cause Analysis (RCA)**: Graf pergantungan (*dependency graph*) dan analisis korelasi kausal bagi menyiasat punca kerosakan.
 - [ ] **Fasa 7: What-If Simulation Engine**: Penilaian senario hipotetikal (contoh: pengurangan beban 20% vs penutupan segera).
 - [ ] **Fasa 8: Decision Engine**: Pemarkahan pelbagai kriteria (Kos vs Risiko vs Kerugian Pengeluaran) dan cadangan tindakan optimum.
@@ -271,6 +271,13 @@ python -m apps.simulator.cli benchmark --ticks 500
 ```bash
 # Mulakan background consumer worker (subscribe ke topik nexus/factory/+/line/+/machine/+/telemetry)
 python -m apps.worker.mqtt_consumer
+```
+
+### 8.6 Menjalankan Latihan & Penanda Aras Model Ramalan (Predictive Intelligence)
+
+```bash
+# Jalankan pipeline sintesis trajektori, latihan ML, dan penilaian penanda aras (benchmark)
+python -m services.prediction.training
 ```
 
 ---

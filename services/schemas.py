@@ -55,6 +55,13 @@ class AnomalyLifecycleStatus(str, Enum):
     INSUFFICIENT_BASELINE = "INSUFFICIENT_BASELINE"
 
 
+class PredictionStatus(str, Enum):
+    ESTIMATED = "ESTIMATED"
+    INSUFFICIENT_DATA = "INSUFFICIENT_DATA"
+    MAINTENANCE_REQUIRED = "MAINTENANCE_REQUIRED"
+    HEALTHY = "HEALTHY"
+
+
 class ActionType(str, Enum):
     CONTINUE = "CONTINUE"
     REDUCE_LOAD = "REDUCE_LOAD"
@@ -227,6 +234,51 @@ class MachineAnomalyStatus(BaseModel):
 # ---------------------------------------------------------------------------
 # Prediction Schema
 # ---------------------------------------------------------------------------
+class RiskHorizonForecast(BaseModel):
+    horizon_minutes: int
+    horizon_hours: float
+    failure_probability: float = Field(..., ge=0.0, le=1.0)
+    risk_level: SeverityLevel
+    confidence: float = Field(default=0.90, ge=0.0, le=1.0)
+
+
+class RiskForecastResponse(BaseModel):
+    machine_id: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    current_status: OperatingStatus = OperatingStatus.NORMAL
+    current_health_score: float = Field(..., ge=0.0, le=100.0)
+    horizons: List[RiskHorizonForecast] = Field(default_factory=list)
+    provenance: DataProvenance = DataProvenance.PREDICTED
+
+
+class HealthTrajectoryPoint(BaseModel):
+    horizon_minutes: int
+    horizon_hours: float
+    predicted_health_score: float = Field(..., ge=0.0, le=100.0)
+    health_status: str
+    provenance: DataProvenance = DataProvenance.PREDICTED
+
+
+class RULResponse(BaseModel):
+    machine_id: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    remaining_useful_life_hours: float = Field(..., ge=0.0)
+    rul_lower_hours: Optional[float] = None
+    rul_upper_hours: Optional[float] = None
+    confidence_level: float = Field(default=0.90, ge=0.0, le=1.0)
+    prediction_status: PredictionStatus = PredictionStatus.ESTIMATED
+    model_version: str = "v1.0.0"
+    provenance: DataProvenance = DataProvenance.PREDICTED
+
+
+class ContributingFactor(BaseModel):
+    factor_name: str
+    metric_name: str
+    importance: float
+    impact_direction: str = "increases_risk"  # "increases_risk", "stable", "decreases_risk"
+    description: str
+
+
 class PredictionBase(BaseModel):
     machine_id: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -234,9 +286,18 @@ class PredictionBase(BaseModel):
     predicted_failure_probability: float = Field(..., ge=0.0, le=1.0)
     predicted_health_score: float = Field(..., ge=0.0, le=100.0)
     remaining_useful_life_hours: float = Field(..., ge=0.0, description="Estimated RUL in operating hours")
+    rul_lower_hours: Optional[float] = None
+    rul_upper_hours: Optional[float] = None
     risk_level: SeverityLevel = SeverityLevel.LOW
     confidence: float = Field(default=0.90, ge=0.0, le=1.0)
+    prediction_status: PredictionStatus = PredictionStatus.ESTIMATED
+    model_version: str = "v1.0.0"
+    feature_version: str = "v1.0.0"
+    health_trajectory: Dict[str, float] = Field(default_factory=dict)
+    risk_forecast: Dict[str, float] = Field(default_factory=dict)
+    contributing_factors: List[Dict[str, Any]] = Field(default_factory=list)
     provenance: DataProvenance = DataProvenance.PREDICTED
+    created_at: Optional[datetime] = None
 
 
 class PredictionCreate(PredictionBase):
@@ -247,6 +308,23 @@ class Prediction(PredictionBase):
     id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PredictionAnalysisRequest(BaseModel):
+    machine_id: str
+    horizon_minutes: Optional[int] = 120
+    persist: bool = True
+
+
+class PredictionAnalysisResponse(BaseModel):
+    machine_id: str
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    prediction: Prediction
+    risk_forecast: RiskForecastResponse
+    health_trajectory: List[HealthTrajectoryPoint] = Field(default_factory=list)
+    rul: RULResponse
+    contributing_factors: List[ContributingFactor] = Field(default_factory=list)
+    baseline_comparison: Dict[str, Any] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------

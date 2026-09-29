@@ -25,18 +25,18 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 └──────────────────┬───────────────────────────────┬─────────────────────┘
                    │ Synchronous State Update      │ Asynchronous Event
                    ▼                               ▼
-┌─────────────────────────────────────┐ ┌────────────────────────────────┐
-│      DIGITAL TWIN ENGINE            │ │   ANOMALY DETECTION ENGINE     │
-│  - Deterministic State Transitions  │ │  - Feature Extraction (Rolling)│
-│  - Dynamic Freshness Tracking       │ │  - Detector A: Statistical Z   │
-│    (FRESH <= 60s, STALE, UNKNOWN)   │ │  - Detector B: Rolling Trend   │
-│  - Health Score Calculation         │ │  - Detector C: Isolation Forest│
-│  - Enterprise Factory Snapshot      │ │  - Sensor vs Machine Classifier│
-│  - Fast In-Memory Cache             │ │  - Multi-Detector Evidence Fuse│
-│                                     │ │  - Temporal Persistence State  │
-└──────────────────┬──────────────────┘ └────────────────┬───────────────┘
-                   │                                     │
-                   └──────────────────┬──────────────────┘
+┌─────────────────────────────────────┐ ┌────────────────────────────────┐ ┌────────────────────────────────┐
+│      DIGITAL TWIN ENGINE            │ │   ANOMALY DETECTION ENGINE     │ │ PREDICTIVE INTELLIGENCE ENGINE │
+│  - Deterministic State Transitions  │ │  - Feature Extraction (Rolling)│ │  - Multi-Horizon Risk Forecast │
+│  - Dynamic Freshness Tracking       │ │  - Detector A: Statistical Z   │ │    (60m, 120m, 240m, 360m)     │
+│    (FRESH <= 60s, STALE, UNKNOWN)   │ │  - Detector B: Rolling Trend   │ │  - Calibrated Probabilities    │
+│  - Health Score Calculation         │ │  - Detector C: Isolation Forest│ │  - Quantile RUL Bounds [lo, hi]│
+│  - Enterprise Factory Snapshot      │ │  - Sensor vs Machine Classifier│ │  - Health Trajectory Forecast  │
+│  - Fast In-Memory Cache             │ │  - Multi-Detector Evidence Fuse│ │  - Factor Attribution Explains │
+│                                     │ │  - Temporal Persistence State  │ │  - Cold Start Guard (< 15 smp) │
+└──────────────────┬──────────────────┘ └────────────────┬───────────────┘ └────────────────┬───────────────┘
+                   │                                     │                                  │
+                   └──────────────────┬──────────────────┴──────────────────────────────────┘
                                       ▼
 ┌────────────────────────────────────────────────────────────────────────┐
 │                    NEXUS API GATEWAY (FastAPI)                         │
@@ -45,6 +45,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 │  - `/api/v1/telemetry` (Single & Batch Ingestion)                      │
 │  - `/api/v1/factory/state` (Factory Digital Twin Snapshot)             │
 │  - `/api/v1/anomalies` (List, Detail, On-Demand Analysis, Status)      │
+│  - `/api/v1/predictions` (List, Detail, On-Demand Analysis, Horizons)  │
 │  - `/api/v1/simulator` (Control, Scenario Injection, Ticks)            │
 │  - `/api/v1/audit` (Governance & Immutable Audit Logs)                 │
 └────────────────────────────────────────────────────────────────────────┘
@@ -60,6 +61,7 @@ NEXUS is designed as an industrial-grade **Decision Intelligence & Digital Twin 
 | **Ingestion Layer** | Validates physical bounds, eliminates network duplicates, writes to database, updates Digital Twin. | P95 $< 15\text{ ms}$ |
 | **Digital Twin Layer** | Evaluates deterministic machine health, failure probability, and data freshness. | P95 $< 25\text{ ms}$ |
 | **Anomaly Intelligence** | Unsupervised multi-layer anomaly detection (Statistical, Trend, Isolation Forest) and physical classification. | P95 $< 30\text{ ms}$ (Target: $< 200\text{ ms}$) |
+| **Predictive Intelligence** | Multi-horizon risk forecasting (1h, 2h, 4h, 6h), quantile RUL uncertainty interval, degradation trajectory. | P95 $= 26.2\text{ ms}$ (Target: $< 200\text{ ms}$) |
 | **API Gateway Layer** | Exposes versioned REST endpoints with CORS, structured validation, and security headers. | Sub-millisecond routing overhead |
 
 ---

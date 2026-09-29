@@ -147,9 +147,22 @@ class PredictionModel(Base):
     predicted_failure_probability: Mapped[float] = mapped_column(Float, nullable=False)
     predicted_health_score: Mapped[float] = mapped_column(Float, nullable=False)
     remaining_useful_life_hours: Mapped[float] = mapped_column(Float, nullable=False)
+    rul_lower_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    rul_upper_hours: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     risk_level: Mapped[str] = mapped_column(String(20), default="LOW")
     confidence: Mapped[float] = mapped_column(Float, default=0.90)
+    prediction_status: Mapped[str] = mapped_column(String(30), default="ESTIMATED", nullable=False)
+    model_version: Mapped[str] = mapped_column(String(50), default="v1.0.0", nullable=False)
+    feature_version: Mapped[str] = mapped_column(String(50), default="v1.0.0", nullable=False)
+    health_trajectory: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    risk_forecast: Mapped[Dict[str, Any]] = mapped_column(JSON, default=dict)
+    contributing_factors: Mapped[List[Dict[str, Any]]] = mapped_column(JSON, default=list)
     provenance: Mapped[str] = mapped_column(String(20), default="PREDICTED")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
 
     machine: Mapped["MachineModel"] = relationship("MachineModel", back_populates="predictions")
 

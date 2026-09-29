@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc
 
 from database.session import get_db
-from database.models.models import MachineModel, TelemetryModel, AnomalyModel
+from database.models.models import MachineModel, TelemetryModel, AnomalyModel, PredictionModel, MachineStateModel
 from services.schemas import (
     Machine,
     MachineCreate,
@@ -19,9 +19,13 @@ from services.schemas import (
     Telemetry,
     Anomaly,
     MachineAnomalyStatus,
+    Prediction,
+    RiskForecastResponse,
+    RULResponse,
 )
 from services.digital_twin.engine import get_digital_twin_engine
 from services.anomaly.engine import get_anomaly_engine
+from services.prediction.engine import get_prediction_engine
 
 router = APIRouter(prefix="/machines", tags=["Machines"])
 
@@ -152,3 +156,61 @@ def register_machine(machine_in: MachineCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_machine)
     return new_machine
+
+
+@router.get("/{machine_id}/predictions", response_model=List[Prediction])
+def get_machine_predictions(
+    machine_id: str,
+    limit: int = Query(50, ge=1, le=500, description="Max predictions to return"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    db: Session = Depends(get_db)
+):
+    """Retrieves prediction history for a specific machine."""
+    machine = db.query(MachineModel).filter(MachineModel.id == machine_id).first()
+    if not machine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine '{machine_id}' not found in registry"
+        )
+    return (
+        db.query(PredictionModel)
+        .filter(PredictionModel.machine_id == machine_id)
+        .order_by(desc(PredictionModel.timestamp))
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
+
+
+@router.get("/{machine_id}/risk-forecast", response_model=RiskForecastResponse)
+def get_machine_risk_forecast(machine_id: str, db: Session = Depends(get_db)):
+    """Retrieves real-time multi-horizon failure risk forecast for a machine."""
+    machine = db.query(MachineModel).filter(MachineModel.id == machine_id).first()
+    if not machine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine '{machine_id}' not found in registry"
+        )
+    state = db.query(MachineStateModel).filter_by(machine_id=machine_id).first()
+    curr_health = state.health_score if state else 100.0
+
+    engine = get_prediction_engine()
+    analysis = engine.predict(machine_id=machine_id, current_health=curr_health)
+    return analysis.risk_forecast
+
+
+@router.get("/{machine_id}/rul", response_model=RULResponse)
+def get_machine_rul(machine_id: str, db: Session = Depends(get_db)):
+    """Retrieves remaining useful life (RUL) estimation with uncertainty bounds for a machine."""
+    machine = db.query(MachineModel).filter(MachineModel.id == machine_id).first()
+    if not machine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine '{machine_id}' not found in registry"
+        )
+    state = db.query(MachineStateModel).filter_by(machine_id=machine_id).first()
+    curr_health = state.health_score if state else 100.0
+
+    engine = get_prediction_engine()
+    analysis = engine.predict(machine_id=machine_id, current_health=curr_health)
+    return analysis.rul
