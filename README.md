@@ -193,7 +193,7 @@ Bagi mengelakkan sebarang konflik dengan perkhidmatan lain yang sedang aktif pad
 - [x] **Discovery & GitHub Setup**: Pemeriksaan persekitaran, seni bina, dan inisialisasi git repository.
 - [x] **Fasa 1: Foundation & Core Infrastructure**: Pydantic schemas, SQLAlchemy models, Alembic migrations, security foundation, FastAPI gateway, dan pytest test suites (30 tests, 97% coverage).
 - [x] **Fasa 2: Virtual Factory Simulator**: Penjana telemetri sintetik realistik (M01-M06 merentasi Line 1 & Line 2), gandingan fizik termomekanikal, 5 senario kerosakan, jam simulasi (time dilation), pengangkutan MQTT & PostgreSQL, dan CLI `nexus-sim` (52 tests lulus).
-- [ ] **Fasa 3: Telemetry Ingestion & Digital Twin**: Validasi kualiti data, penjejakan status dinamik, dan pengiraan skor kesihatan (*Health Score*).
+- [x] **Fasa 3: Telemetry Ingestion & Digital Twin**: Pipeline penerimaan telemetri berdaya tahan tinggi, validasi batas fizik, dedup kriptografi SHA-256 (idempotency), penerimaan kelompok separa (*partial batch acceptance*), konsumer MQTT berkala, enjin Digital Twin dengan penjejakan kesegaran dinamik (*FRESH*, *STALE*, *UNKNOWN*), dan pemantauan latensi P95 (< 15 ms). Lihat [Dokumentasi Telemetri](docs/telemetry.md) & [Dokumentasi Digital Twin](docs/digital-twin.md) (72 tests lulus).
 - [ ] **Fasa 4: Anomaly Detection Engine**: Model Statistical Z-Score, Rolling Window, dan Isolation Forest.
 - [ ] **Fasa 5: Predictive Intelligence**: Ramalan kebarangkalian kegagalan (*Failure Probability*) dan baki jangka hayat mesin (*RUL*).
 - [ ] **Fasa 6: Root Cause Analysis (RCA)**: Graf pergantungan (*dependency graph*) dan analisis korelasi kausal bagi menyiasat punca kerosakan.
@@ -264,6 +264,13 @@ python -m apps.simulator.cli scenario bearing_degradation --machine M03 --severi
 
 # Jalankan ujian penanda aras throughput (benchmark)
 python -m apps.simulator.cli benchmark --ticks 500
+```
+
+### 8.5 Menjalankan MQTT Telemetry Ingestion Worker
+
+```bash
+# Mulakan background consumer worker (subscribe ke topik nexus/factory/+/line/+/machine/+/telemetry)
+python -m apps.worker.mqtt_consumer
 ```
 
 ---

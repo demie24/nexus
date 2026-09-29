@@ -7,6 +7,7 @@ from apps.api.routers.machines import router as machines_router
 from apps.api.routers.telemetry import router as telemetry_router
 from apps.api.routers.audit import router as audit_router
 from apps.api.routers.simulator import router as simulator_router
+from apps.api.routers.digital_twin import router as factory_router
 
 __all__ = [
     "health_router",
@@ -14,4 +15,5 @@ __all__ = [
     "telemetry_router",
     "audit_router",
     "simulator_router",
+    "factory_router",
 ]

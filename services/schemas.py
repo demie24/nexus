@@ -19,10 +19,17 @@ class OperatingStatus(str, Enum):
     IDLE = "IDLE"
     DEGRADED = "DEGRADED"
     WARNING = "WARNING"
+    HIGH_RISK = "HIGH_RISK"
     CRITICAL = "CRITICAL"
     SHUTDOWN = "SHUTDOWN"
     MAINTENANCE = "MAINTENANCE"
     FAILED = "FAILED"
+
+
+class FreshnessStatus(str, Enum):
+    FRESH = "FRESH"
+    STALE = "STALE"
+    UNKNOWN = "UNKNOWN"
 
 
 class SeverityLevel(str, Enum):
@@ -82,23 +89,24 @@ class Machine(MachineBase):
 
 
 # ---------------------------------------------------------------------------
-# Telemetry Schema (Observed stream)
+# Telemetry Schema (Observed stream with Physical Validation)
 # ---------------------------------------------------------------------------
 class TelemetryBase(BaseModel):
     machine_id: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    temperature: float = Field(..., description="Operating temperature in Celsius")
-    vibration: float = Field(..., description="Vibration velocity in mm/s")
-    pressure: float = Field(default=2.5, description="Operating pressure in bar")
-    current: float = Field(..., description="Electric current in Amperes")
-    voltage: float = Field(default=400.0, description="Operating voltage in Volts")
-    rpm: float = Field(..., description="Rotations per minute")
-    power_kw: float = Field(..., description="Active power consumption in kW")
-    load: float = Field(default=1.0, ge=0.0, description="Operating load percentage / factor")
-    output_rate: float = Field(..., description="Production units per hour")
+    temperature: float = Field(..., ge=-50.0, le=400.0, description="Operating temperature in Celsius")
+    vibration: float = Field(..., ge=0.0, le=150.0, description="Vibration velocity in mm/s")
+    pressure: float = Field(default=2.5, ge=0.0, le=1000.0, description="Operating pressure in bar")
+    current: float = Field(..., ge=0.0, le=500.0, description="Electric current in Amperes")
+    voltage: float = Field(default=400.0, ge=0.0, le=1000.0, description="Operating voltage in Volts")
+    rpm: float = Field(..., ge=0.0, le=25000.0, description="Rotations per minute")
+    power_kw: float = Field(..., ge=0.0, le=1000.0, description="Active power consumption in kW")
+    load: float = Field(default=1.0, ge=0.0, le=5.0, description="Operating load percentage / factor")
+    output_rate: float = Field(..., ge=0.0, le=50000.0, description="Production units per hour")
     efficiency: float = Field(default=100.0, ge=0.0, le=100.0, description="Operating efficiency %")
     quality_indicator: float = Field(default=1.0, ge=0.0, le=1.0, description="Data quality score")
     provenance: DataProvenance = DataProvenance.OBSERVED
+    idempotency_hash: Optional[str] = None
 
 
 class TelemetryCreate(TelemetryBase):
@@ -270,3 +278,74 @@ class AuditLog(AuditLogBase):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ---------------------------------------------------------------------------
+# Digital Twin State & Factory Snapshot Schemas (Phase 3)
+# ---------------------------------------------------------------------------
+class DigitalTwinState(BaseModel):
+    machine_id: str
+    machine_name: str
+    line_id: str
+    machine_type: str
+    status: OperatingStatus
+    freshness: FreshnessStatus = FreshnessStatus.FRESH
+    health_score: float = Field(..., ge=0.0, le=100.0)
+    failure_probability: float = Field(..., ge=0.0, le=1.0)
+    load_factor: float
+    maintenance_status: str = "OK"
+    temperature: float
+    vibration: float
+    pressure: float
+    current: float
+    voltage: float
+    rpm: float
+    power_kw: float
+    efficiency: float
+    output_rate: float
+    last_telemetry_timestamp: Optional[datetime] = None
+    last_telemetry_id: Optional[int] = None
+    provenance: DataProvenance = DataProvenance.OBSERVED
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class FactorySnapshot(BaseModel):
+    factory_id: str = "FACTORY_01"
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    total_machines: int
+    operating_machines: int
+    degraded_machines: int
+    high_risk_machines: int
+    failed_machines: int
+    stale_machines: int
+    overall_health: float = Field(..., ge=0.0, le=100.0)
+    active_scenarios: int = 0
+    latest_telemetry_timestamp: Optional[datetime] = None
+    machines: List[DigitalTwinState] = Field(default_factory=list)
+
+
+class IngestionItemStatus(str, Enum):
+    ACCEPTED = "ACCEPTED"
+    DUPLICATE = "DUPLICATE"
+    REJECTED = "REJECTED"
+
+
+class IngestionResult(BaseModel):
+    status: IngestionItemStatus
+    message: str
+    telemetry_id: Optional[int] = None
+    machine_id: str
+    is_duplicate: bool = False
+    idempotency_hash: Optional[str] = None
+    digital_twin_updated: bool = False
+
+
+class BatchIngestionResult(BaseModel):
+    total_received: int
+    accepted_count: int
+    duplicate_count: int
+    rejected_count: int
+    results: List[IngestionResult] = Field(default_factory=list)
+

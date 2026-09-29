@@ -17,6 +17,7 @@ from apps.api.routers import (
     telemetry_router,
     audit_router,
     simulator_router,
+    factory_router,
 )
 from database.base import Base
 from database.session import engine
@@ -103,6 +104,7 @@ app.include_router(machines_router, prefix=settings.API_V1_PREFIX)
 app.include_router(telemetry_router, prefix=settings.API_V1_PREFIX)
 app.include_router(audit_router, prefix=settings.API_V1_PREFIX)
 app.include_router(simulator_router, prefix=settings.API_V1_PREFIX)
+app.include_router(factory_router, prefix=settings.API_V1_PREFIX)
 
 
 @app.get("/", tags=["Root"])

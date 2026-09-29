@@ -1,15 +1,24 @@
 """
-NEXUS Machine Registry Endpoints
-Handles querying and registering industrial assets across production lines.
+NEXUS Machine Registry & Digital Twin State Endpoints
+Handles querying and registering industrial assets, inspecting Digital Twin states,
+and querying machine time-series telemetry.
 """
 
-from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status
+from datetime import datetime
+from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+from sqlalchemy import desc, asc
 
 from database.session import get_db
-from database.models.models import MachineModel
-from services.schemas import Machine, MachineCreate
+from database.models.models import MachineModel, TelemetryModel
+from services.schemas import (
+    Machine,
+    MachineCreate,
+    DigitalTwinState,
+    Telemetry,
+)
+from services.digital_twin.engine import get_digital_twin_engine
 
 router = APIRouter(prefix="/machines", tags=["Machines"])
 
@@ -21,9 +30,19 @@ def list_machines(db: Session = Depends(get_db)):
     return machines
 
 
+@router.get("/states", response_model=List[DigitalTwinState])
+def get_all_machine_states(db: Session = Depends(get_db)):
+    """
+    Retrieve current Digital Twin operational states for all registered machines.
+    Dynamically assesses data freshness (FRESH vs STALE).
+    """
+    dt_engine = get_digital_twin_engine()
+    return dt_engine.get_all_machine_states(db)
+
+
 @router.get("/{machine_id}", response_model=Machine)
 def get_machine(machine_id: str, db: Session = Depends(get_db)):
-    """Retrieve machine details by unique machine ID."""
+    """Retrieve machine metadata by unique machine ID."""
     machine = db.query(MachineModel).filter(MachineModel.id == machine_id).first()
     if not machine:
         raise HTTPException(
@@ -31,6 +50,56 @@ def get_machine(machine_id: str, db: Session = Depends(get_db)):
             detail=f"Machine '{machine_id}' not found in registry"
         )
     return machine
+
+
+@router.get("/{machine_id}/state", response_model=DigitalTwinState)
+def get_machine_state(machine_id: str, db: Session = Depends(get_db)):
+    """
+    Retrieve current Digital Twin state for a specific machine.
+    Dynamically computes freshness status and health metrics.
+    """
+    dt_engine = get_digital_twin_engine()
+    state = dt_engine.get_machine_state(machine_id, db)
+    if not state:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine '{machine_id}' not found in registry"
+        )
+    return state
+
+
+@router.get("/{machine_id}/telemetry", response_model=List[Telemetry])
+def get_machine_telemetry_series(
+    machine_id: str,
+    start_time: Optional[datetime] = Query(None, description="Start timestamp filter (ISO 8601)"),
+    end_time: Optional[datetime] = Query(None, description="End timestamp filter (ISO 8601)"),
+    limit: int = Query(100, ge=1, le=1000, description="Max telemetry records to return"),
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order: 'asc' or 'desc'"),
+    db: Session = Depends(get_db)
+):
+    """
+    Retrieves historical time-series telemetry records for a specific machine.
+    Supports start_time, end_time, limit, and ordering filters.
+    """
+    machine = db.query(MachineModel).filter(MachineModel.id == machine_id).first()
+    if not machine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine '{machine_id}' not found in registry"
+        )
+
+    query = db.query(TelemetryModel).filter(TelemetryModel.machine_id == machine_id)
+    if start_time:
+        query = query.filter(TelemetryModel.timestamp >= start_time)
+    if end_time:
+        query = query.filter(TelemetryModel.timestamp <= end_time)
+
+    if order == "asc":
+        query = query.order_by(asc(TelemetryModel.timestamp))
+    else:
+        query = query.order_by(desc(TelemetryModel.timestamp))
+
+    return query.limit(limit).all()
 
 
 @router.post("", response_model=Machine, status_code=status.HTTP_201_CREATED)

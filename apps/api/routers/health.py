@@ -8,6 +8,7 @@ import time
 from fastapi import APIRouter, status
 from apps.api.config import get_settings
 from database.session import check_db_connection
+from services.ingestion.metrics import get_metrics_collector
 
 router = APIRouter(tags=["Health & Diagnostics"])
 settings = get_settings()
@@ -54,12 +55,15 @@ def get_readiness():
 @router.get("/metrics", status_code=status.HTTP_200_OK)
 def get_metrics():
     """
-    Exposes high-level telemetry and pipeline health metrics.
+    Exposes high-level telemetry, ingestion performance, and pipeline health metrics.
     """
     uptime_seconds = round(time.time() - START_TIME, 2)
+    ingestion_metrics = get_metrics_collector().get_snapshot()
+
     return {
         "uptime_seconds": uptime_seconds,
         "project": settings.PROJECT_NAME,
         "environment": settings.ENVIRONMENT,
-        "timestamp": datetime.now(timezone.utc).isoformat()
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "ingestion": ingestion_metrics
     }

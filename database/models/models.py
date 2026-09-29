@@ -70,6 +70,7 @@ class TelemetryModel(Base):
     efficiency: Mapped[float] = mapped_column(Float, default=100.0)
     quality_indicator: Mapped[float] = mapped_column(Float, default=1.0)
     provenance: Mapped[str] = mapped_column(String(20), default="OBSERVED")
+    idempotency_hash: Mapped[Optional[str]] = mapped_column(String(64), index=True, nullable=True)
 
     machine: Mapped["MachineModel"] = relationship("MachineModel", back_populates="telemetries")
 
@@ -83,11 +84,24 @@ class MachineStateModel(Base):
 
     machine_id: Mapped[str] = mapped_column(String(50), ForeignKey("machines.id"), primary_key=True)
     status: Mapped[str] = mapped_column(String(30), default="NORMAL")
+    freshness: Mapped[str] = mapped_column(String(20), default="FRESH")
     health_score: Mapped[float] = mapped_column(Float, default=100.0)
     failure_probability: Mapped[float] = mapped_column(Float, default=0.0)
     load_factor: Mapped[float] = mapped_column(Float, default=1.0)
+    maintenance_status: Mapped[str] = mapped_column(String(50), default="OK")
+    temperature: Mapped[float] = mapped_column(Float, default=0.0)
+    vibration: Mapped[float] = mapped_column(Float, default=0.0)
+    pressure: Mapped[float] = mapped_column(Float, default=0.0)
+    current: Mapped[float] = mapped_column(Float, default=0.0)
+    voltage: Mapped[float] = mapped_column(Float, default=400.0)
+    rpm: Mapped[float] = mapped_column(Float, default=0.0)
+    power_kw: Mapped[float] = mapped_column(Float, default=0.0)
+    efficiency: Mapped[float] = mapped_column(Float, default=100.0)
+    output_rate: Mapped[float] = mapped_column(Float, default=0.0)
     temperature_trend: Mapped[float] = mapped_column(Float, default=0.0)
     vibration_trend: Mapped[float] = mapped_column(Float, default=0.0)
+    last_telemetry_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    last_telemetry_timestamp: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     provenance: Mapped[str] = mapped_column(String(20), default="OBSERVED")
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
