@@ -11,14 +11,17 @@ from sqlalchemy.orm import Session
 from sqlalchemy import desc, asc
 
 from database.session import get_db
-from database.models.models import MachineModel, TelemetryModel
+from database.models.models import MachineModel, TelemetryModel, AnomalyModel
 from services.schemas import (
     Machine,
     MachineCreate,
     DigitalTwinState,
     Telemetry,
+    Anomaly,
+    MachineAnomalyStatus,
 )
 from services.digital_twin.engine import get_digital_twin_engine
+from services.anomaly.engine import get_anomaly_engine
 
 router = APIRouter(prefix="/machines", tags=["Machines"])
 
@@ -100,6 +103,39 @@ def get_machine_telemetry_series(
         query = query.order_by(desc(TelemetryModel.timestamp))
 
     return query.limit(limit).all()
+
+
+@router.get("/{machine_id}/anomalies", response_model=List[Anomaly])
+def get_machine_anomalies(
+    machine_id: str,
+    resolved: Optional[bool] = Query(None, description="Filter by resolved status"),
+    limit: int = Query(50, ge=1, le=500, description="Max anomalies to return"),
+    db: Session = Depends(get_db)
+):
+    """Retrieves anomaly history for a specific machine."""
+    machine = db.query(MachineModel).filter(MachineModel.id == machine_id).first()
+    if not machine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine '{machine_id}' not found in registry"
+        )
+    query = db.query(AnomalyModel).filter(AnomalyModel.machine_id == machine_id)
+    if resolved is not None:
+        query = query.filter(AnomalyModel.resolved == resolved)
+    return query.order_by(desc(AnomalyModel.timestamp)).limit(limit).all()
+
+
+@router.get("/{machine_id}/anomaly-status", response_model=MachineAnomalyStatus)
+def get_machine_anomaly_status(machine_id: str, db: Session = Depends(get_db)):
+    """Retrieves real-time active anomaly status, baseline health, and latest severity for a machine."""
+    machine = db.query(MachineModel).filter(MachineModel.id == machine_id).first()
+    if not machine:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Machine '{machine_id}' not found in registry"
+        )
+    engine = get_anomaly_engine()
+    return engine.get_machine_anomaly_status(machine_id, db)
 
 
 @router.post("", response_model=Machine, status_code=status.HTTP_201_CREATED)

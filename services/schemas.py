@@ -33,10 +33,26 @@ class FreshnessStatus(str, Enum):
 
 
 class SeverityLevel(str, Enum):
+    NORMAL = "NORMAL"
     LOW = "LOW"
     MEDIUM = "MEDIUM"
     HIGH = "HIGH"
     CRITICAL = "CRITICAL"
+
+
+class AnomalyType(str, Enum):
+    MACHINE_BEHAVIOR = "MACHINE_BEHAVIOR"
+    SENSOR_ANOMALY = "SENSOR_ANOMALY"
+    MULTIVARIATE_ANOMALY = "MULTIVARIATE_ANOMALY"
+
+
+class AnomalyLifecycleStatus(str, Enum):
+    DETECTED = "DETECTED"
+    CONFIRMED = "CONFIRMED"
+    ACTIVE = "ACTIVE"
+    RECOVERING = "RECOVERING"
+    RESOLVED = "RESOLVED"
+    INSUFFICIENT_BASELINE = "INSUFFICIENT_BASELINE"
 
 
 class ActionType(str, Enum):
@@ -150,13 +166,20 @@ class AnomalyBase(BaseModel):
     machine_id: str
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     anomaly_detected: bool = True
+    anomaly_type: AnomalyType = AnomalyType.MULTIVARIATE_ANOMALY
     anomaly_score: float = Field(..., ge=0.0, le=1.0, description="Normalized anomaly score 0-1")
     severity: SeverityLevel = SeverityLevel.LOW
+    status: AnomalyLifecycleStatus = AnomalyLifecycleStatus.DETECTED
     primary_metric: str = Field(..., description="Metric triggering anomaly (e.g. vibration, temperature)")
     observed_value: float
     expected_value: float
     threshold: float
+    triggered_signals: List[str] = Field(default_factory=list)
+    detector_evidence: Dict[str, Any] = Field(default_factory=dict)
+    explanation: Optional[str] = None
     provenance: DataProvenance = DataProvenance.OBSERVED
+    resolved: bool = False
+    resolved_at: Optional[datetime] = None
 
 
 class AnomalyCreate(AnomalyBase):
@@ -165,9 +188,40 @@ class AnomalyCreate(AnomalyBase):
 
 class Anomaly(AnomalyBase):
     id: Optional[int] = None
-    resolved: bool = False
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class AnomalyAnalysisRequest(BaseModel):
+    machine_id: str
+    telemetry: Optional[TelemetryCreate] = None
+
+
+class AnomalyAnalysisResponse(BaseModel):
+    machine_id: str
+    timestamp: datetime
+    anomaly_detected: bool
+    anomaly_score: float
+    severity: SeverityLevel
+    anomaly_type: Optional[AnomalyType] = None
+    status: AnomalyLifecycleStatus
+    primary_metric: str
+    observed_value: float
+    expected_value: float
+    threshold: float
+    triggered_signals: List[str] = Field(default_factory=list)
+    detector_evidence: Dict[str, Any] = Field(default_factory=dict)
+    explanation: str
+    persisted_anomaly_id: Optional[int] = None
+
+
+class MachineAnomalyStatus(BaseModel):
+    machine_id: str
+    has_active_anomaly: bool
+    active_anomaly_count: int
+    latest_severity: SeverityLevel
+    baseline_status: str
+    latest_anomaly: Optional[Anomaly] = None
 
 
 # ---------------------------------------------------------------------------
